@@ -7,6 +7,7 @@
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <module name="236363_winter_18-19_hw2" />
+        <module name="236363_spring_18_hw2" />
       </profile>
     </annotationProcessing>
   </component>
