@@ -28,7 +28,7 @@ public class Example {
         deleteFromTable();
         selectFromTable();
         dropTable();
-        //stam cooment
+        //stam iliya cooment
 
 
     }
