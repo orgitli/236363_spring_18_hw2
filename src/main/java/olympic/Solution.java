@@ -17,19 +17,63 @@ public class Solution {
         Connection connection = DBConnector.getConnection();
         PreparedStatement pstmt = null;
         try {
-
-            pstmt = connection.prepareStatement("CREATE TABLE athlet\n" +
+            //create athlet
+            pstmt = connection.prepareStatement("CREATE TABLE athlete\n" +
                     "(\n" +
-                    "    athlet_id integer NOT NULL,\n" +
-                    "    athlet_name string NOT NULL,\n" +
-                    "    country string NOT NULL,\n" +
+                    "    athlete_id integer NOT NULL,\n" +
+                    "    athlete_name VARCHAR(255) NOT NULL,\n" +
+                    "    country VARCHAR(255) NOT NULL,\n" +
                     "    active bool NOT NULL,\n" +
-                    "    PRIMARY KEY (athlet_id),\n" +
-                    "    CHECK (athlet_id > 0)\n" +
+                    "    PRIMARY KEY (athlete_id),\n" +
+                    "    CHECK (athlete_id > 0)\n" +
                     ")");
             pstmt.execute();
+
+            //create sport
+            pstmt = connection.prepareStatement("CREATE TABLE sport\n" +
+                    "(\n" +
+                    "    sport_id INTEGER NOT NULL,\n" +
+                    "    sport_name VARCHAR(255) NOT NULL,\n" +
+                    "    city VARCHAR(255) NOT NULL,\n" +
+                    "    athlets_counter INTEGER NOT NULL DEFAULT 0,\n" +
+                    "    PRIMARY KEY (sport_id),\n" +
+                    "    CHECK (sport_id > 0)\n" +
+                    ")");
+            pstmt.execute();
+
+            //create participate
+            pstmt = connection.prepareStatement("CREATE TABLE participate\n" +
+                    "(\n" +
+                    "    sport_id INTEGER NOT NULL ,\n" +
+                    "    athlete_id INTEGER NOT NULL,\n" +
+                    "    medal INTEGER ,\n" +
+                    "    payment INTEGER NOT NULL DEFAULT 0,\n" +
+                    "   FOREIGN KEY (sport_id)\n" +
+                    " REFERENCES sport(sport_id)\n" +
+                    " ON DELETE CASCADE,\n" +
+                    "   FOREIGN KEY (athlete_id)\n" +
+                    " REFERENCES athlete(athlete_id)\n" +
+                    " ON DELETE CASCADE,\n" +
+                    "    CHECK (medal > 0 AND medal<4) \n" +
+                    ")");
+            pstmt.execute();
+
+            //create friends
+            pstmt = connection.prepareStatement("CREATE TABLE friends\n" +
+                    "(\n" +
+                    "    athlete_id1 INTEGER NOT NULL ,\n" +
+                    "    athlete_id2 INTEGER NOT NULL,\n" +
+                    "   FOREIGN KEY (athlete_id1)\n" +
+                    " REFERENCES athlete(athlete_id)\n" +
+                    " ON DELETE CASCADE,\n" +
+                    "   FOREIGN KEY (athlete_id2)\n" +
+                    " REFERENCES athlete(athlete_id)\n" +
+                    " ON DELETE CASCADE\n" +
+                    ")");
+            pstmt.execute();
+
         } catch (SQLException e) {
-            //e.printStackTrace()();
+            e.printStackTrace();
         }
         finally {
             try {
@@ -47,7 +91,35 @@ public class Solution {
 
     public static void clearTables() { }
 
-    public static void dropTables() { }
+    public static void dropTables() {
+        Connection connection = DBConnector.getConnection();
+        PreparedStatement pstmt = null;
+        try {
+            pstmt = connection.prepareStatement("DROP TABLE IF EXISTS participate");
+            pstmt.execute();
+            pstmt = connection.prepareStatement("DROP TABLE IF EXISTS friends");
+            pstmt.execute();
+            pstmt = connection.prepareStatement("DROP TABLE IF EXISTS athlete");
+            pstmt.execute();
+            pstmt = connection.prepareStatement("DROP TABLE IF EXISTS sport");
+            pstmt.execute();
+
+        } catch (SQLException e) {
+            //e.printStackTrace()();
+        }
+        finally {
+            try {
+                pstmt.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+            try {
+                connection.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+        }
+    }
 
     public static ReturnValue addAthlete(Athlete athlete) { return OK; }
 
