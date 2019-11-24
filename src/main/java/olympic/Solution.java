@@ -3,13 +3,47 @@ package olympic;
 import olympic.business.Athlete;
 import olympic.business.ReturnValue;
 import olympic.business.Sport;
+import olympic.data.DBConnector;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.ArrayList;
 
 import static olympic.business.ReturnValue.OK;
 
 public class Solution {
-    public static void createTables() { }
+    public static void createTables() {
+        Connection connection = DBConnector.getConnection();
+        PreparedStatement pstmt = null;
+        try {
+
+            pstmt = connection.prepareStatement("CREATE TABLE athlet\n" +
+                    "(\n" +
+                    "    athlet_id integer NOT NULL,\n" +
+                    "    athlet_name string NOT NULL,\n" +
+                    "    country string NOT NULL,\n" +
+                    "    active bool NOT NULL,\n" +
+                    "    PRIMARY KEY (athlet_id),\n" +
+                    "    CHECK (athlet_id > 0)\n" +
+                    ")");
+            pstmt.execute();
+        } catch (SQLException e) {
+            //e.printStackTrace()();
+        }
+        finally {
+            try {
+                pstmt.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+            try {
+                connection.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+        }
+    }
 
     public static void clearTables() { }
 
