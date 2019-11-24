@@ -33,6 +33,7 @@ public class Example {
     }
 
     private static void deleteFromTable() {
+        //Hello greetings.
         Connection connection = DBConnector.getConnection();
         PreparedStatement pstmt = null;
         try {
