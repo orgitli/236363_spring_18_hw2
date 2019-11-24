@@ -13,6 +13,7 @@ public class Example {
 
     public static void main(String[] args) {
         Solution sol=new Solution();
+        sol.dropTables();
         sol.createTables();
 /*
         javaStringExample();
