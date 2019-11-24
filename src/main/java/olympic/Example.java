@@ -28,7 +28,6 @@ public class Example {
         deleteFromTable();
         selectFromTable();
         dropTable();
-        //stam 
 
 
     }
