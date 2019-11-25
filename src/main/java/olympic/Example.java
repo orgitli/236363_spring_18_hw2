@@ -1,5 +1,8 @@
 package olympic;
 
+import olympic.business.Athlete;
+import olympic.business.ReturnValue;
+import olympic.business.Sport;
 import olympic.data.DBConnector;
 
 import java.sql.Connection;
@@ -15,6 +18,26 @@ public class Example {
         Solution sol=new Solution();
         sol.dropTables();
         sol.createTables();
+        Athlete athlete = new Athlete();
+        athlete.setId(30);
+        athlete.setName("Or");
+        athlete.setCountry("Israel");
+        athlete.setIsActive(true);
+        sol.addAthlete(athlete);
+
+        athlete.setId(7);
+        if(sol.addAthlete(athlete) == ReturnValue.BAD_PARAMS) System.out.println("OK\n");
+
+        Athlete a = sol.getAthleteProfile(7) ;
+        System.out.println(a.getId());
+
+        if(sol.deleteAthlete(athlete) == ReturnValue.OK) System.out.println("Deleted\n"); ;
+
+        Sport sport = new Sport();
+        sport.setId(-1);
+        sport.setName("football");
+        sport.setCity("Haifa");
+        if(sol.addSport(sport) == ReturnValue.BAD_PARAMS) System.out.println("Sport added\n"); ;
 /*
         javaStringExample();
         arrayListExample();
