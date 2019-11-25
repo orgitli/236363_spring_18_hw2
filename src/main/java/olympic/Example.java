@@ -31,13 +31,20 @@ public class Example {
         Athlete a = sol.getAthleteProfile(7) ;
         System.out.println(a.getId());
 
-        if(sol.deleteAthlete(athlete) == ReturnValue.OK) System.out.println("Deleted\n"); ;
 
         Sport sport = new Sport();
         sport.setId(-1);
         sport.setName("football");
         sport.setCity("Haifa");
-        if(sol.addSport(sport) == ReturnValue.BAD_PARAMS) System.out.println("Sport added\n"); ;
+        if(sol.addSport(sport) == ReturnValue.BAD_PARAMS) System.out.println("Sport added\n");
+        sport.setId(1);
+        sol.addSport(sport);
+        System.out.println(sol.athleteJoinSport(1,7));
+        System.out.println(sol.athleteJoinSport(1,7));
+        System.out.println(sol.athleteLeftSport(1,7));
+        System.out.println(sol.athleteLeftSport(1,7));
+
+        //sol.dropTables();
 /*
         javaStringExample();
         arrayListExample();
@@ -56,7 +63,6 @@ public class Example {
         selectFromTable();
         dropTable();
 */
-
     }
 
     private static void deleteFromTable() {
@@ -166,7 +172,13 @@ public class Example {
         Connection connection = DBConnector.getConnection();
         PreparedStatement pstmt = null;
         try {
-            pstmt = connection.prepareStatement("DROP TABLE IF EXISTS hello_world");
+            pstmt = connection.prepareStatement("DROP TABLE IF EXISTS participate");
+            pstmt.execute();
+            pstmt = connection.prepareStatement("DROP TABLE IF EXISTS friends");
+            pstmt.execute();
+            pstmt = connection.prepareStatement("DROP TABLE IF EXISTS sport");
+            pstmt.execute();
+            pstmt = connection.prepareStatement("DROP TABLE IF EXISTS athlete");
             pstmt.execute();
         } catch (SQLException e) {
             //e.printStackTrace()();

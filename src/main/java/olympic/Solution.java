@@ -56,7 +56,7 @@ public class Solution {
                     "   FOREIGN KEY (athlete_id)\n" +
                     " REFERENCES athlete(athlete_id)\n" +
                     " ON DELETE CASCADE,\n" +
-                    "    CHECK (medal > 0 AND medal<4) \n" +
+                    "    CHECK (medal >= 0 AND medal<4) \n" +
                     ")");
             pstmt.execute();
 
@@ -257,17 +257,169 @@ public class Solution {
         return OK;
     }
 
-    public static Sport getSport(Integer sportId) { return Sport.badSport(); }
+    public static Sport getSport(Integer sportId) {
+        Connection connection = DBConnector.getConnection();
+        PreparedStatement pstmt = null;
+        try{
+            pstmt = connection.prepareStatement("SELECT * FROM sport" +
+                    " WHERE sport_id = ?");
+            pstmt.setInt(1,sportId);
+            ResultSet res = pstmt.executeQuery();
+            Sport sport = new Sport();
+            while(res.next()) {
+                sport.setId(res.getInt("sport_id"));
+                sport.setName(res.getString("sport_name"));
+                sport.setCity(res.getString("city"));
+                sport.setAthletesCount(res.getInt("athlets_counter"));
+            }
+            return sport;
+        }
+        catch(SQLException e){
+            return Sport.badSport();
+        }
+        finally{
+            try {
+                pstmt.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+            try {
+                connection.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+        }
+
+    }
 
     public static ReturnValue deleteSport(Sport sport) {
-        return OK;
+        Connection connection = DBConnector.getConnection();
+        PreparedStatement pstmt = null;
+        try{
+            pstmt = connection.prepareStatement("DELETE from sport" +
+                    " WHERE sport_id = ?");
+            pstmt.setInt(1,sport.getId());
+            ResultSet res = pstmt.executeQuery();
+            if(!res.next()){
+                return NOT_EXISTS;
+            }else{
+                return OK;
+            }
+        }
+        catch(SQLException e){
+            return ERROR;
+        }
+        finally{
+            try {
+                pstmt.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+            try {
+                connection.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+        }
+
     }
 
     public static ReturnValue athleteJoinSport(Integer sportId, Integer athleteId) {
+        Athlete a = getAthleteProfile(athleteId);
+        if(a.getId() == -1){
+            return NOT_EXISTS;
+        }
+        Sport s = getSport((sportId));
+        if(s.getId()==-1){
+            return NOT_EXISTS;
+        }
+        Integer money = 0;
+        if(a.getIsActive()){
+           money = 100;
+        }
+        Connection connection = DBConnector.getConnection();
+        PreparedStatement pstmt = null;
+        try{
+            pstmt = connection.prepareStatement("UPDATE sport set athletes_counter = athletes_count + 1 where sport_id=?");
+            pstmt.execute();
+            pstmt = connection.prepareStatement(("SELECT * FROM participate" +
+                    "    WHERE sport_id=? and athlete_id=?"));
+            pstmt.setInt(1, sportId);
+            pstmt.setInt(2, athleteId);
+            ResultSet res = pstmt.executeQuery();
+            if(res.next()){
+                return ALREADY_EXISTS;
+            }
+            pstmt = connection.prepareStatement("INSERT INTO participate" +
+                    "    VALUES (?,?,?,?)" );
+            pstmt.setInt(1, sportId);
+            pstmt.setInt(2, athleteId);
+            pstmt.setInt(3, 0);
+            pstmt.setInt(4, money);
+            pstmt.execute();
+        }catch(SQLException e){
+            if(Integer.valueOf(e.getSQLState()) == PostgreSQLErrorCodes.CHECK_VIOLATION.getValue() || Integer.valueOf(e.getSQLState()) == PostgreSQLErrorCodes.NOT_NULL_VIOLATION.getValue())
+                return BAD_PARAMS;
+            if(Integer.valueOf(e.getSQLState()) == PostgreSQLErrorCodes.UNIQUE_VIOLATION.getValue())
+                return ALREADY_EXISTS;
+            return ERROR;
+        }
+        finally {
+            try {
+                pstmt.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+            try {
+                connection.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+        }
         return OK;
+
     }
 
     public static ReturnValue athleteLeftSport(Integer sportId, Integer athleteId) {
+        Athlete a = getAthleteProfile(athleteId);
+        if(a.getId() == -1){
+            return NOT_EXISTS;
+        }
+        Sport s = getSport((sportId));
+        if(s.getId()==-1){
+            return NOT_EXISTS;
+        }
+        Connection connection = DBConnector.getConnection();
+        PreparedStatement pstmt = null;
+        try{
+            pstmt = connection.prepareStatement(("SELECT * FROM participate" +
+                    "    WHERE sport_id=? and athlete_id=?"));
+            pstmt.setInt(1, sportId);
+            pstmt.setInt(2, athleteId);
+            ResultSet res = pstmt.executeQuery();
+            if(!res.next()){
+                return NOT_EXISTS;
+            }
+            pstmt = connection.prepareStatement("DELETE FROM  participate" +
+                    "    WHERE sport_id=? and athlete_id=?");
+            pstmt.setInt(1, sportId);
+            pstmt.setInt(2, athleteId);
+            pstmt.execute();
+        }catch(SQLException e){
+            return ERROR;
+        }
+        finally {
+            try {
+                pstmt.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+            try {
+                connection.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+        }
         return OK;
     }
 
