@@ -11,10 +11,14 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 
+import static org.junit.Assert.assertEquals;
+
 
 public class Example {
 
     public static void main(String[] args) {
+
+        /*
         Solution sol=new Solution();
         sol.dropTables();
         sol.createTables();
@@ -43,8 +47,112 @@ public class Example {
         System.out.println(sol.athleteJoinSport(1,7));
         System.out.println(sol.athleteLeftSport(1,7));
         System.out.println(sol.athleteLeftSport(1,7));
+*/
+        /*
+        //check athleteJoinSport/ athleteLeftSport
+        Solution sol=new Solution();
+        sol.dropTables();
+        sol.createTables();
+        Athlete athlete = new Athlete();
+        athlete.setId(30);
+        athlete.setName("Or");
+        athlete.setCountry("Israel");
+        athlete.setIsActive(false);
+        assertEquals(sol.addAthlete(athlete), ReturnValue.OK);
 
-        //sol.dropTables();
+        Sport sport = new Sport();
+        sport.setId(1);
+        sport.setName("football");
+        sport.setCity("Haifa");
+        assertEquals(sol.addSport(sport), ReturnValue.OK);
+
+        assertEquals(sol.athleteJoinSport(2,30), ReturnValue.NOT_EXISTS);
+        assertEquals(sol.athleteJoinSport(1,2), ReturnValue.NOT_EXISTS);
+
+        assertEquals(sol.athleteJoinSport(1,30), ReturnValue.OK);
+        assertEquals(sol.athleteJoinSport(1,30), ReturnValue.ALREADY_EXISTS);
+*/
+
+        /*
+        //check confirmStandings and athleteDisqualified
+        Solution sol=new Solution();
+        sol.dropTables();
+        sol.createTables();
+        Athlete athlete = new Athlete();
+        athlete.setId(30);
+        athlete.setName("Or");
+        athlete.setCountry("Israel");
+        athlete.setIsActive(false);
+        sol.addAthlete(athlete);
+
+        Sport sport = new Sport();
+        sport.setId(1);
+        sport.setName("football");
+        sport.setCity("Haifa");
+
+        sol.addSport(sport);
+        sol.athleteJoinSport(1,30);
+        assertEquals(sol.confirmStanding(1,30, 4), ReturnValue.BAD_PARAMS);
+        assertEquals( sol.confirmStanding(1,30, 2), ReturnValue.OK);
+        assertEquals( sol.confirmStanding(1,30, 2), ReturnValue.OK);
+        assertEquals( sol.confirmStanding(1,30, 3), ReturnValue.OK);
+        assertEquals( sol.confirmStanding(1,30, 1), ReturnValue.OK);
+        assertEquals( sol.confirmStanding(2,30, 2), ReturnValue.NOT_EXISTS);
+        assertEquals( sol.confirmStanding(1,3, 2), ReturnValue.NOT_EXISTS);
+
+        assertEquals(sol.athleteDisqualified(1,30), ReturnValue.OK);
+        assertEquals(sol.athleteDisqualified(1,1), ReturnValue.NOT_EXISTS);
+        assertEquals(sol.athleteDisqualified(2,30), ReturnValue.NOT_EXISTS);
+        assertEquals( sol.confirmStanding(1,30, 2), ReturnValue.OK);
+        */
+
+        //check makeFriends and removeFriendship
+        Solution sol=new Solution();
+        sol.dropTables();
+        sol.createTables();
+
+        Athlete athlete = new Athlete();
+        athlete.setId(30);
+        athlete.setName("Or");
+        athlete.setCountry("Israel");
+        athlete.setIsActive(false);
+        sol.addAthlete(athlete);
+
+        Athlete athlete2 = new Athlete();
+        athlete.setId(31);
+        athlete.setName("Or");
+        athlete.setCountry("Israel");
+        athlete.setIsActive(false);
+        sol.addAthlete(athlete);
+
+        Sport sport = new Sport();
+        sport.setId(1);
+        sport.setName("football");
+        sport.setCity("Haifa");
+
+        sol.addSport(sport);
+        sol.athleteJoinSport(1,30);
+        assertEquals(sol.confirmStanding(1,30, 4), ReturnValue.BAD_PARAMS);
+        assertEquals( sol.confirmStanding(1,30, 2), ReturnValue.OK);
+        assertEquals( sol.confirmStanding(1,30, 2), ReturnValue.OK);
+        assertEquals( sol.confirmStanding(1,30, 3), ReturnValue.OK);
+        assertEquals( sol.confirmStanding(1,30, 1), ReturnValue.OK);
+        assertEquals( sol.confirmStanding(2,30, 2), ReturnValue.NOT_EXISTS);
+        assertEquals( sol.confirmStanding(1,3, 2), ReturnValue.NOT_EXISTS);
+
+        assertEquals(sol.athleteDisqualified(1,30), ReturnValue.OK);
+        assertEquals(sol.athleteDisqualified(1,1), ReturnValue.NOT_EXISTS);
+        assertEquals(sol.athleteDisqualified(2,30), ReturnValue.NOT_EXISTS);
+        assertEquals( sol.confirmStanding(1,30, 2), ReturnValue.OK);
+
+        assertEquals(sol.makeFriends(1,1), ReturnValue.BAD_PARAMS);
+        assertEquals(sol.makeFriends(30,1), ReturnValue.NOT_EXISTS);
+        assertEquals(sol.makeFriends(1,30), ReturnValue.NOT_EXISTS);
+
+        assertEquals(sol.makeFriends(31,30), ReturnValue.OK);
+        assertEquals(sol.makeFriends(31,30), ReturnValue.ALREADY_EXISTS);
+        assertEquals(sol.makeFriends(30,31), ReturnValue.ALREADY_EXISTS);
+
 /*
         javaStringExample();
         arrayListExample();

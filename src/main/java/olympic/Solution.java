@@ -37,7 +37,7 @@ public class Solution {
                     "    sport_id INTEGER NOT NULL,\n" +
                     "    sport_name VARCHAR(255) NOT NULL,\n" +
                     "    city VARCHAR(255) NOT NULL,\n" +
-                    "    athlets_counter INTEGER NOT NULL DEFAULT 0,\n" +
+                    "    athletes_counter INTEGER NOT NULL DEFAULT 0,\n" +
                     "    PRIMARY KEY (sport_id),\n" +
                     "    CHECK (sport_id > 0)\n" +
                     ")");
@@ -56,7 +56,8 @@ public class Solution {
                     "   FOREIGN KEY (athlete_id)\n" +
                     " REFERENCES athlete(athlete_id)\n" +
                     " ON DELETE CASCADE,\n" +
-                    "    CHECK (medal >= 0 AND medal<4) \n" +
+                    "    CHECK (medal >= 0 AND medal<4), \n" +
+                    "PRIMARY KEY (sport_id, athlete_id)"+
                     ")");
             pstmt.execute();
 
@@ -70,7 +71,9 @@ public class Solution {
                     " ON DELETE CASCADE,\n" +
                     "   FOREIGN KEY (athlete_id2)\n" +
                     " REFERENCES athlete(athlete_id)\n" +
-                    " ON DELETE CASCADE\n" +
+                    " ON DELETE CASCADE,\n" +
+                    "PRIMARY KEY(athlete_id1, athlete_id2), "+
+                    "CHECK (athlete_id1 != athlete_id2)" +
                     ")");
             pstmt.execute();
 
@@ -289,7 +292,6 @@ public class Solution {
                 //e.printStackTrace()();
             }
         }
-
     }
 
     public static ReturnValue deleteSport(Sport sport) {
@@ -299,14 +301,11 @@ public class Solution {
             pstmt = connection.prepareStatement("DELETE from sport" +
                     " WHERE sport_id = ?");
             pstmt.setInt(1,sport.getId());
-            ResultSet res = pstmt.executeQuery();
-            if(!res.next()){
-                return NOT_EXISTS;
-            }else{
-                return OK;
-            }
+            pstmt.execute();
         }
         catch(SQLException e){
+            if(Integer.valueOf(e.getSQLState()) == PostgreSQLErrorCodes.UNIQUE_VIOLATION.getValue())
+                return NOT_EXISTS;
             return ERROR;
         }
         finally{
@@ -321,45 +320,39 @@ public class Solution {
                 //e.printStackTrace()();
             }
         }
-
+        return OK;
     }
 
     public static ReturnValue athleteJoinSport(Integer sportId, Integer athleteId) {
-        Athlete a = getAthleteProfile(athleteId);
-        if(a.getId() == -1){
-            return NOT_EXISTS;
-        }
-        Sport s = getSport((sportId));
-        if(s.getId()==-1){
-            return NOT_EXISTS;
-        }
-        Integer money = 0;
-        if(a.getIsActive()){
-           money = 100;
-        }
         Connection connection = DBConnector.getConnection();
         PreparedStatement pstmt = null;
         try{
-            pstmt = connection.prepareStatement("UPDATE sport set athletes_counter = athletes_count + 1 where sport_id=?");
-            pstmt.execute();
-            pstmt = connection.prepareStatement(("SELECT * FROM participate" +
-                    "    WHERE sport_id=? and athlete_id=?"));
-            pstmt.setInt(1, sportId);
-            pstmt.setInt(2, athleteId);
-            ResultSet res = pstmt.executeQuery();
-            if(res.next()){
-                return ALREADY_EXISTS;
-            }
+            pstmt = connection.prepareStatement("SELECT active FROM athlete "+
+                                                        "WHERE athlete_id=?" );
+            pstmt.setInt(1, athleteId);
+            ResultSet result = pstmt.executeQuery();
+            boolean is_active = false;
+            if(result.next())
+                is_active = result.getBoolean("active");
+            int money;
+            if(is_active)
+                money = 0;
+            else
+                money = 100;
             pstmt = connection.prepareStatement("INSERT INTO participate" +
-                    "    VALUES (?,?,?,?)" );
+                    "    VALUES (?,?,null ,?)" );
             pstmt.setInt(1, sportId);
             pstmt.setInt(2, athleteId);
-            pstmt.setInt(3, 0);
-            pstmt.setInt(4, money);
+            pstmt.setInt(3, money);
             pstmt.execute();
+            pstmt = connection.prepareStatement("UPDATE sport " +
+                    "SET athletes_counter=athletes_counter+1 " +
+                    "WHERE sport_id=?" );
+            pstmt.setInt(1, sportId);
+            pstmt.executeUpdate();
         }catch(SQLException e){
-            if(Integer.valueOf(e.getSQLState()) == PostgreSQLErrorCodes.CHECK_VIOLATION.getValue() || Integer.valueOf(e.getSQLState()) == PostgreSQLErrorCodes.NOT_NULL_VIOLATION.getValue())
-                return BAD_PARAMS;
+            if(Integer.valueOf(e.getSQLState()) == PostgreSQLErrorCodes.FOREIGN_KEY_VIOLATION.getValue() )
+                return NOT_EXISTS;
             if(Integer.valueOf(e.getSQLState()) == PostgreSQLErrorCodes.UNIQUE_VIOLATION.getValue())
                 return ALREADY_EXISTS;
             return ERROR;
@@ -377,35 +370,25 @@ public class Solution {
             }
         }
         return OK;
-
     }
 
     public static ReturnValue athleteLeftSport(Integer sportId, Integer athleteId) {
-        Athlete a = getAthleteProfile(athleteId);
-        if(a.getId() == -1){
-            return NOT_EXISTS;
-        }
-        Sport s = getSport((sportId));
-        if(s.getId()==-1){
-            return NOT_EXISTS;
-        }
         Connection connection = DBConnector.getConnection();
         PreparedStatement pstmt = null;
         try{
-            pstmt = connection.prepareStatement(("SELECT * FROM participate" +
-                    "    WHERE sport_id=? and athlete_id=?"));
+            pstmt = connection.prepareStatement("DELETE FROM participate "+
+                    "WHERE athlete_id=? AND sport_id = ?" );
+            pstmt.setInt(1, athleteId);
+            pstmt.setInt(2, sportId);
+            pstmt.executeUpdate();
+            pstmt = connection.prepareStatement("UPDATE sport " +
+                    "SET athletes_counter=athletes_counter-1 " +
+                    "WHERE sport_id=?" );
             pstmt.setInt(1, sportId);
-            pstmt.setInt(2, athleteId);
-            ResultSet res = pstmt.executeQuery();
-            if(!res.next()){
-                return NOT_EXISTS;
-            }
-            pstmt = connection.prepareStatement("DELETE FROM  participate" +
-                    "    WHERE sport_id=? and athlete_id=?");
-            pstmt.setInt(1, sportId);
-            pstmt.setInt(2, athleteId);
-            pstmt.execute();
+            pstmt.executeUpdate();
         }catch(SQLException e){
+            if(Integer.valueOf(e.getSQLState()) == PostgreSQLErrorCodes.FOREIGN_KEY_VIOLATION.getValue() || Integer.valueOf(e.getSQLState()) == PostgreSQLErrorCodes.UNIQUE_VIOLATION.getValue())
+                return NOT_EXISTS;
             return ERROR;
         }
         finally {
@@ -424,14 +407,112 @@ public class Solution {
     }
 
     public static ReturnValue confirmStanding(Integer sportId, Integer athleteId, Integer place) {
+        Connection connection = DBConnector.getConnection();
+        PreparedStatement pstmt = null;
+        try{
+            pstmt = connection.prepareStatement("UPDATE participate" +
+                    "    SET medal=?" +
+                    "   WHERE athlete_id = ? AND sport_id = ?");
+            pstmt.setInt(1, place);
+            pstmt.setInt(2, athleteId);
+            pstmt.setInt(3,sportId);
+            int affectedRows = pstmt.executeUpdate();
+            if(affectedRows == 0)
+                return NOT_EXISTS;
+        }catch(SQLException e){
+            if(Integer.valueOf(e.getSQLState()) == PostgreSQLErrorCodes.FOREIGN_KEY_VIOLATION.getValue())
+                return NOT_EXISTS;
+            if(Integer.valueOf(e.getSQLState()) == PostgreSQLErrorCodes.CHECK_VIOLATION.getValue() || Integer.valueOf(e.getSQLState()) == PostgreSQLErrorCodes.NOT_NULL_VIOLATION.getValue())
+                return BAD_PARAMS;
+            return ERROR;
+        }
+        finally {
+            try {
+                pstmt.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+            try {
+                connection.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+        }
         return OK;
     }
 
     public static ReturnValue athleteDisqualified(Integer sportId, Integer athleteId) {
+        Connection connection = DBConnector.getConnection();
+        PreparedStatement pstmt = null;
+        try{
+            pstmt = connection.prepareStatement("UPDATE participate" +
+                    "    SET medal=null" +
+                    "   WHERE athlete_id = ? AND sport_id = ?");
+            pstmt.setInt(1, athleteId);
+            pstmt.setInt(2,sportId);
+            int affectedRows = pstmt.executeUpdate();
+            if(affectedRows == 0)
+                return NOT_EXISTS;
+        }catch(SQLException e){
+            if(Integer.valueOf(e.getSQLState()) == PostgreSQLErrorCodes.FOREIGN_KEY_VIOLATION.getValue())
+                return NOT_EXISTS;
+            return ERROR;
+        }
+        finally {
+            try {
+                pstmt.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+            try {
+                connection.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+        }
         return OK;
     }
 
     public static ReturnValue makeFriends(Integer athleteId1, Integer athleteId2) {
+        Connection connection = DBConnector.getConnection();
+        PreparedStatement pstmt = null;
+        try{
+            //check if symetric friendship exists
+            pstmt = connection.prepareStatement("SELECT FROM friends" +
+                    "    WHERE athlete_id1=? AND athlete_id2=?" );
+            pstmt.setInt(1, athleteId2);
+            pstmt.setInt(2, athleteId1);
+            ResultSet results = pstmt.executeQuery();
+            if(results.next())
+                return ALREADY_EXISTS;
+            ////////////////////////////////////////////////////////////
+
+            pstmt = connection.prepareStatement("INSERT INTO friends" +
+                    "    VALUES (?,?)" );
+            pstmt.setInt(1, athleteId1);
+            pstmt.setInt(2, athleteId2);
+            pstmt.execute();
+        }catch(SQLException e){
+            if(Integer.valueOf(e.getSQLState()) == PostgreSQLErrorCodes.CHECK_VIOLATION.getValue() )
+                return BAD_PARAMS;
+            if( Integer.valueOf(e.getSQLState()) == PostgreSQLErrorCodes.FOREIGN_KEY_VIOLATION.getValue())
+                return NOT_EXISTS;
+            if(Integer.valueOf(e.getSQLState()) == PostgreSQLErrorCodes.UNIQUE_VIOLATION.getValue())
+                return ALREADY_EXISTS;
+            return ERROR;
+        }
+        finally {
+            try {
+                pstmt.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+            try {
+                connection.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+        }
         return OK;
     }
 
