@@ -517,14 +517,126 @@ public class Solution {
     }
 
     public static ReturnValue removeFriendship(Integer athleteId1, Integer athleteId2) {
+        Connection connection = DBConnector.getConnection();
+        PreparedStatement pstmt = null;
+        try{
+            int r1 = 1;
+            int r2 = 1;
+            //check if symetric friendship exists
+            pstmt = connection.prepareStatement("SELECT FROM friends" +
+                    "    WHERE athlete_id1=? AND athlete_id2=?" );
+            pstmt.setInt(1, athleteId2);
+            pstmt.setInt(2, athleteId1);
+            ResultSet results = pstmt.executeQuery();
+            if(!results.next())
+                r1 = 0;
+            pstmt = connection.prepareStatement("SELECT FROM friends" +
+                    "    WHERE athlete_id1=? AND athlete_id2=?" );
+            pstmt.setInt(1, athleteId1);
+            pstmt.setInt(2, athleteId2);
+            results = pstmt.executeQuery();
+            if(!results.next())
+                r2 = 0;
+            if(r1+r2==0){
+                return NOT_EXISTS;
+            }
+            ////////////////////////////////////////////////////////////
+
+            pstmt = connection.prepareStatement("DELETE FROM friends" +
+                    "  WHERE athlete_id1=? and athlete_id2=?" );
+            if(r1==1){
+                pstmt.setInt(1, athleteId2);
+                pstmt.setInt(2, athleteId1);
+            }
+            if(r2==1){
+                pstmt.setInt(1, athleteId1);
+                pstmt.setInt(2, athleteId2);
+            }
+
+            pstmt.executeUpdate();
+
+        }catch(SQLException e){
+
+
+            return ERROR;
+        }
+        finally {
+            try {
+                pstmt.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+            try {
+                connection.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+        }
         return OK;
     }
 
     public static ReturnValue changePayment(Integer athleteId, Integer sportId, Integer payment) {
+        if(payment<0){
+            return BAD_PARAMS;
+        }
+        Connection connection = DBConnector.getConnection();
+        PreparedStatement pstmt = null;
+        try{
+
+            // check if athlete
+            pstmt = connection.prepareStatement("SELECT active FROM athlete" +
+                    "    WHERE athlete_id=?" );
+            pstmt.setInt(1, athleteId);
+
+            ResultSet results = pstmt.executeQuery();
+            if(!results.next()){
+                return NOT_EXISTS;
+            }
+            if(results.next()==true) {
+                return NOT_EXISTS;
+            }
+
+
+            pstmt = connection.prepareStatement("SELECT * FROM participate" +
+                    "    WHERE sport_id=? AND athlete_id=?" );
+            pstmt.setInt(1, sportId);
+            pstmt.setInt(2, athleteId);
+            results = pstmt.executeQuery();
+            if(!results.next()){
+                return NOT_EXISTS;
+            }
+            pstmt = connection.prepareStatement("UPDATE participate" +
+                    " SET payment=?   WHERE sport_id=? AND athlete_id=?" );
+            pstmt.setInt(1, payment);
+            pstmt.setInt(2, sportId);
+            pstmt.setInt(3, athleteId);
+
+
+
+            pstmt.executeUpdate();
+
+        }catch(SQLException e){
+
+
+            return ERROR;
+        }
+        finally {
+            try {
+                pstmt.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+            try {
+                connection.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+        }
         return OK;
     }
 
     public static Boolean isAthletePopular(Integer athleteId) {
+
         return true;
     }
 
@@ -533,6 +645,52 @@ public class Solution {
     }
 
     public static Integer getIncomeFromSport(Integer sportId) {
+        Connection connection = DBConnector.getConnection();
+        PreparedStatement pstmt = null;
+        try{
+
+            // check if athlete
+            pstmt = connection.prepareStatement("SELECT * FROM sport" +
+                    "    WHERE sport_id=?" );
+            pstmt.setInt(1, sportId);
+
+            ResultSet results = pstmt.executeQuery();
+            if(!results.next()){
+                return 0;
+            }
+
+
+
+            pstmt = connection.prepareStatement("select sum(participate.payment) from athlete, participate\n" +
+                    "where athlete.athlete_id=participate.athlete_id and\n" +
+                    "athlete.active=false and \n" +
+                    "participate.sport_id=?");
+            pstmt.setInt(1, sportId);
+
+            results = pstmt.executeQuery();
+            if(!results.next()){
+                return 0;
+            }else{
+                return results.getInt("sum");
+            }
+
+
+
+        }catch(SQLException e){
+
+        }
+        finally {
+            try {
+                pstmt.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+            try {
+                connection.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+        }
         return 0;
     }
 

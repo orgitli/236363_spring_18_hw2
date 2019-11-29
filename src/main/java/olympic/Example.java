@@ -152,6 +152,50 @@ public class Example {
         assertEquals(sol.makeFriends(31,30), ReturnValue.OK);
         assertEquals(sol.makeFriends(31,30), ReturnValue.ALREADY_EXISTS);
         assertEquals(sol.makeFriends(30,31), ReturnValue.ALREADY_EXISTS);
+        assertEquals(sol.makeFriends(31,30), ReturnValue.ALREADY_EXISTS);
+
+        assertEquals(sol.removeFriendship(31,30), ReturnValue.OK);
+        assertEquals(sol.removeFriendship(31,30), ReturnValue.NOT_EXISTS);
+
+        assertEquals(sol.makeFriends(31,30), ReturnValue.OK);
+        assertEquals(sol.removeFriendship(30,31), ReturnValue.OK);
+        assertEquals(sol.removeFriendship(30,31), ReturnValue.NOT_EXISTS);
+        assertEquals(sol.removeFriendship(30,30), ReturnValue.NOT_EXISTS);
+        assertEquals(sol.changePayment(30,1,900), ReturnValue.OK);
+        assertEquals(sol.changePayment(39,1,900), ReturnValue.NOT_EXISTS);
+        assertEquals(sol.changePayment(30,5,900), ReturnValue.NOT_EXISTS);
+        assertEquals(sol.changePayment(30,5,-9), ReturnValue.BAD_PARAMS);
+        athlete.setId(1);
+        athlete.setName("Avi");
+        athlete.setCountry("Israel");
+        athlete.setIsActive(false);
+        sol.addAthlete(athlete);
+        athlete.setId(2);
+        athlete.setName("Moshe");
+        athlete.setCountry("Israel");
+        athlete.setIsActive(false);
+        sol.addAthlete(athlete);
+        athlete.setId(3);
+        athlete.setName("Iliya");
+        athlete.setCountry("Israel");
+        athlete.setIsActive(false);
+        sol.addAthlete(athlete);
+        athlete.setId(4);
+        athlete.setName("Boris");
+        athlete.setCountry("Russia");
+        athlete.setIsActive(false);
+        sol.addAthlete(athlete);
+
+        sport.setId(2);
+        sport.setName("swimming");
+        sport.setCity("Nahariya");
+        sol.addSport(sport);
+        sol.athleteJoinSport(1,2);
+        sol.athleteJoinSport(2,3);
+        sol.athleteJoinSport(2,4);
+        sol.getIncomeFromSport(1);
+        assertEquals((long)sol.getIncomeFromSport(1),(long)1000);
+        assertEquals((long)sol.getIncomeFromSport(2),(long)200);
 
 /*
         javaStringExample();
