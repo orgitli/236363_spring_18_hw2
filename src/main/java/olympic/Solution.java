@@ -830,7 +830,7 @@ public class Solution {
                     "inner join\n" +
                     "(select city,count(sport_id) as num_sports from sport group by city) t2\n" +
                     "on\n" +
-                    "t1.city = t2.city order by \"popular_city\" desc limit 1" );
+                    "t1.city = t2.city order by \"popular_city\" desc, city desc " );
             ResultSet results = pstmt.executeQuery();
             if(results.next())
                 return results.getString("city");
