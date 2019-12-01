@@ -23,8 +23,8 @@ public class Solution {
             pstmt = connection.prepareStatement("CREATE TABLE athlete\n" +
                     "(\n" +
                     "    athlete_id integer NOT NULL,\n" +
-                    "    athlete_name VARCHAR(255) NOT NULL,\n" +
-                    "    country VARCHAR(255) NOT NULL,\n" +
+                    "    athlete_name TEXT NOT NULL,\n" +
+                    "    country TEXT NOT NULL,\n" +
                     "    active bool NOT NULL,\n" +
                     "    PRIMARY KEY (athlete_id),\n" +
                     "    CHECK (athlete_id > 0)\n" +
@@ -35,8 +35,8 @@ public class Solution {
             pstmt = connection.prepareStatement("CREATE TABLE sport\n" +
                     "(\n" +
                     "    sport_id INTEGER NOT NULL,\n" +
-                    "    sport_name VARCHAR(255) NOT NULL,\n" +
-                    "    city VARCHAR(255) NOT NULL,\n" +
+                    "    sport_name TEXT NOT NULL,\n" +
+                    "    city TEXT NOT NULL,\n" +
                     "    athletes_counter INTEGER NOT NULL DEFAULT 0,\n" +
                     "    PRIMARY KEY (sport_id),\n" +
                     "    CHECK (sport_id > 0)\n" +
@@ -90,6 +90,30 @@ public class Solution {
                                                       "FROM athlete , participate " +
                                                         "WHERE athlete.athlete_id=participate.athlete_id ");
             pstmt.execute();
+
+            //crate view athlete_medals
+            pstmt = connection.prepareStatement("CREATE VIEW athletes_medals AS\n" +
+                    "select g1.athlete_id, g1.gold, g2.silver, g3.bronze, COALESCE(g1.gold, 0)*3+COALESCE(g2.silver,0)*2+COALESCE(g3.bronze,0) AS rating  from \n" +
+                    "(SELECT athlete_id FROM athlete) as athlete\n" +
+                    "FULL JOIN\n" +
+                    "(SELECT athlete_id, COUNT(medal) AS gold \n" +
+                    "FROM participate\n" +
+                    "WHERE medal=1 \n" +
+                    "GROUP BY athlete_id) g1 ON g1.athlete_id=athlete.athlete_id\n" +
+                    "FULL JOIN\n" +
+                    "(SELECT athlete_id, COUNT(medal)  AS silver \n" +
+                    "FROM participate\n" +
+                    "WHERE medal=2 \n" +
+                    "GROUP BY athlete_id) g2 ON g1.athlete_id=g2.athlete_id\n" +
+                    "FULL JOIN\n" +
+                    "(SELECT athlete_id, COUNT(medal)  AS bronze \n" +
+                    "FROM participate\n" +
+                    "WHERE medal=3 \n" +
+                    "GROUP BY athlete_id) g3 ON g1.athlete_id=g3.athlete_id\n" +
+                    "ORDER BY rating DESC, athlete_id ASC");
+            pstmt.execute();
+
+            //create athlete_rating view
 
         } catch (SQLException e) {
             e.printStackTrace();
@@ -860,29 +884,14 @@ public class Solution {
         Connection connection = DBConnector.getConnection();
         PreparedStatement pstmt = null;
         try{
-            pstmt = connection.prepareStatement("SELECT  COUNT(*) AS gold " +
-                    "FROM participate " +
-                    "WHERE athlete_id=? AND medal=1 " );
+            pstmt = connection.prepareStatement("SELECT  COALESCE(gold, 0) , COALESCE(silver, 0) , COALESCE(bronze, 0) FROM athletes_medals WHERE athlete_id=?" );
             pstmt.setInt(1, athleteId);
             ResultSet results = pstmt.executeQuery();
-            if(results.next())
+            if(results.next()) {
                 medals.add(results.getInt("gold"));
-
-            pstmt = connection.prepareStatement("SELECT  COUNT(*) AS silver " +
-                    "FROM participate " +
-                    "WHERE athlete_id=? AND medal=2 " );
-            pstmt.setInt(1, athleteId);
-            results = pstmt.executeQuery();
-            if(results.next())
                 medals.add(results.getInt("silver"));
-
-            pstmt = connection.prepareStatement("SELECT  COUNT(*) AS bronze " +
-                    "FROM participate " +
-                    "WHERE athlete_id=? AND medal=3 " );
-            pstmt.setInt(1, athleteId);
-            results = pstmt.executeQuery();
-            if(results.next())
                 medals.add(results.getInt("bronze"));
+            }
 
             return medals;
 
@@ -891,6 +900,7 @@ public class Solution {
             medals.add(0,0);
             medals.add(1,0);
             medals.add(2,0);
+            return medals;
         }
         finally {
             try {
@@ -904,12 +914,38 @@ public class Solution {
                 //e.printStackTrace()();
             }
         }
-
-        return new ArrayList<>();
     }
 
     public static ArrayList<Integer> getMostRatedAthletes() {
-        return new ArrayList<>();
+        ArrayList<Integer> rating_athletes = new ArrayList<>();
+        Connection connection = DBConnector.getConnection();
+        PreparedStatement pstmt = null;
+        try{
+            pstmt = connection.prepareStatement("SELECT  athlete_id FROM athlete_medals " );
+            ResultSet results = pstmt.executeQuery();
+            Integer counter = 1;
+            while(results.next() && counter<=10) {
+                rating_athletes.add(results.getInt("athlete_id"));
+                counter++;
+            }
+            return rating_athletes;
+
+        }catch(SQLException e){
+
+        }
+        finally {
+            try {
+                pstmt.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+            try {
+                connection.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+        }
+        return rating_athletes;
     }
 
     public static ArrayList<Integer> getCloseAthletes(Integer athleteId) {
