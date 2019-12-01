@@ -77,6 +77,20 @@ public class Solution {
                     ")");
             pstmt.execute();
 
+            //create athlete_country_medal view
+            pstmt = connection.prepareStatement("CREATE VIEW country_medal AS \n" +
+                                                     "SELECT  athlete.country, athlete.athlete_id \n" +
+                                                     "FROM athlete , participate " +
+                                                      "WHERE athlete.athlete_id=participate.athlete_id AND participate.medal IS NOT NULL");
+            pstmt.execute();
+
+            //create athlete_sport view
+            pstmt = connection.prepareStatement("CREATE VIEW athlete_sport AS \n" +
+                                                      "SELECT  athlete.athlete_id, participate.sport_id \n" +
+                                                      "FROM athlete , participate " +
+                                                        "WHERE athlete.athlete_id=participate.athlete_id ");
+            pstmt.execute();
+
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -100,7 +114,11 @@ public class Solution {
         Connection connection = DBConnector.getConnection();
         PreparedStatement pstmt = null;
         try {
-            pstmt = connection.prepareStatement("DROP TABLE IF EXISTS participate");
+            pstmt = connection.prepareStatement("DROP VIEW  IF EXISTS athlete_sport");
+            pstmt.execute();
+            pstmt = connection.prepareStatement("DROP VIEW  IF EXISTS country_medal");
+            pstmt.execute();
+            pstmt = connection.prepareStatement("DROP TABLE IF EXISTS participate CASCADE");
             pstmt.execute();
             pstmt = connection.prepareStatement("DROP TABLE IF EXISTS friends");
             pstmt.execute();
@@ -109,8 +127,9 @@ public class Solution {
             pstmt = connection.prepareStatement("DROP TABLE IF EXISTS sport");
             pstmt.execute();
 
+
         } catch (SQLException e) {
-            //e.printStackTrace()();
+            e.printStackTrace();
         }
         finally {
             try {
@@ -376,16 +395,26 @@ public class Solution {
         Connection connection = DBConnector.getConnection();
         PreparedStatement pstmt = null;
         try{
+            pstmt = connection.prepareStatement("select active from athlete where athlete_id=? ");
+            pstmt.setInt(1, athleteId);
+            ResultSet res = pstmt.executeQuery();
+            if(!res.next()){
+                return NOT_EXISTS;
+            }
+            boolean active = res.getBoolean("active");
             pstmt = connection.prepareStatement("DELETE FROM participate "+
                     "WHERE athlete_id=? AND sport_id = ?" );
             pstmt.setInt(1, athleteId);
             pstmt.setInt(2, sportId);
             pstmt.executeUpdate();
-            pstmt = connection.prepareStatement("UPDATE sport " +
-                    "SET athletes_counter=athletes_counter-1 " +
-                    "WHERE sport_id=?" );
-            pstmt.setInt(1, sportId);
-            pstmt.executeUpdate();
+            if(active){
+                pstmt = connection.prepareStatement("UPDATE sport " +
+                        "SET athletes_counter=athletes_counter-1 " +
+                        "WHERE sport_id=?" );
+                pstmt.setInt(1, sportId);
+                pstmt.executeUpdate();
+            }
+
         }catch(SQLException e){
             if(Integer.valueOf(e.getSQLState()) == PostgreSQLErrorCodes.FOREIGN_KEY_VIOLATION.getValue() || Integer.valueOf(e.getSQLState()) == PostgreSQLErrorCodes.UNIQUE_VIOLATION.getValue())
                 return NOT_EXISTS;
@@ -636,13 +665,82 @@ public class Solution {
     }
 
     public static Boolean isAthletePopular(Integer athleteId) {
+        Connection connection = DBConnector.getConnection();
+        PreparedStatement pstmt = null;
+        try{
+            /*
+            pstmt = connection.prepareStatement( "SELECT sport_id FROM athlete_sport " +
+                                                      "WHERE athlete_id=? AND " +
+                                                     "sport_id NOT IN(SELECT sport_id FROM (SELECT athlete_id1 FROM friends " +
+                                                     "WHERE athlete_id2=? " +
+                                                     "UNION ALL " +
+                                                     "SELECT athlete_id2 FROM friends " +
+                                                     "WHERE athlete_id2=? ) AS friends_sports )" +
+                                                      "" );
 
+             */
+            pstmt = connection.prepareStatement("SELECT sport_id FROM ((SELECT athlete_id1 AS athlete_id FROM friends " +
+                    "WHERE athlete_id2=? " +
+                    "UNION ALL " +
+                    "SELECT athlete_id2 AS athlete_id FROM friends " +
+                    "WHERE athlete_id1=? ) AS athletesFriends " +
+                    "INNER JOIN participate ON participate.athlete_id = athletesFriends.athlete_id )  " +
+                    "WHERE sport_id NOT IN ( SELECT sport_id FROM  athlete_sport " +
+                    "WHERE athlete_id=? )  " );
+            pstmt.setInt(1, athleteId);
+            pstmt.setInt(2, athleteId);
+            pstmt.setInt(3, athleteId);
+            ResultSet results = pstmt.executeQuery();
+            if(results.next())
+                return false;
+        }catch(SQLException e){
+            e.printStackTrace();
+        }
+        finally {
+            try {
+                pstmt.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+            try {
+                connection.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+        }
         return true;
     }
 
     public static Integer getTotalNumberOfMedalsFromCountry(String country) {
-        return 0;
+        Connection connection = DBConnector.getConnection();
+        PreparedStatement pstmt = null;
+        try{
+            pstmt = connection.prepareStatement("SELECT FROM country_medal" +
+                    "    WHERE country=? " );
+            pstmt.setString(1, country);
+            ResultSet results = pstmt.executeQuery();
+            int medals_counter = 0;
+            while(results.next())
+                medals_counter++;
+            return medals_counter;
+        }catch(SQLException e){
+            return 0;
+        }
+        finally {
+            try {
+                pstmt.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+            try {
+                connection.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+        }
     }
+
+
 
     public static Integer getIncomeFromSport(Integer sportId) {
         Connection connection = DBConnector.getConnection();
@@ -695,6 +793,31 @@ public class Solution {
     }
 
     public static String getBestCountry() {
+        Connection connection = DBConnector.getConnection();
+        PreparedStatement pstmt = null;
+        try{
+            pstmt = connection.prepareStatement("SELECT country, COUNT(athlete_id) AS medals FROM country_medal" +
+                                                "    GROUP BY country " +
+                                                       " ORDER BY medals DESC, country ASC " );
+            ResultSet results = pstmt.executeQuery();
+            if(results.next())
+                return results.getString("country");
+
+        }catch(SQLException e){
+            return null;
+        }
+        finally {
+            try {
+                pstmt.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+            try {
+                connection.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+        }
         return "";
     }
 
@@ -703,6 +826,55 @@ public class Solution {
     }
 
     public static ArrayList<Integer> getAthleteMedals(Integer athleteId) {
+        ArrayList<Integer> medals = new ArrayList<>();
+        Connection connection = DBConnector.getConnection();
+        PreparedStatement pstmt = null;
+        try{
+            pstmt = connection.prepareStatement("SELECT  COUNT(*) AS gold " +
+                    "FROM participate " +
+                    "WHERE athlete_id=? AND medal=1 " );
+            pstmt.setInt(1, athleteId);
+            ResultSet results = pstmt.executeQuery();
+            if(results.next())
+                medals.add(results.getInt("gold"));
+
+            pstmt = connection.prepareStatement("SELECT  COUNT(*) AS silver " +
+                    "FROM participate " +
+                    "WHERE athlete_id=? AND medal=2 " );
+            pstmt.setInt(1, athleteId);
+            results = pstmt.executeQuery();
+            if(results.next())
+                medals.add(results.getInt("silver"));
+
+            pstmt = connection.prepareStatement("SELECT  COUNT(*) AS bronze " +
+                    "FROM participate " +
+                    "WHERE athlete_id=? AND medal=3 " );
+            pstmt.setInt(1, athleteId);
+            results = pstmt.executeQuery();
+            if(results.next())
+                medals.add(results.getInt("bronze"));
+
+            return medals;
+
+        }catch(SQLException e){
+            e.printStackTrace();
+            medals.add(0,0);
+            medals.add(1,0);
+            medals.add(2,0);
+        }
+        finally {
+            try {
+                pstmt.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+            try {
+                connection.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+        }
+
         return new ArrayList<>();
     }
 
