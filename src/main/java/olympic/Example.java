@@ -196,7 +196,13 @@ public class Example {
         sol.getIncomeFromSport(1);
         assertEquals((long)sol.getIncomeFromSport(1),(long)1000);
         assertEquals((long)sol.getIncomeFromSport(2),(long)200);
-
+        athlete.setId(5);
+        athlete.setName("Vova");
+        athlete.setCountry("Russia");
+        athlete.setIsActive(true);
+        sol.addAthlete(athlete);
+        assertEquals(sol.athleteJoinSport(1,5),ReturnValue.OK);
+        assertEquals(sol.athleteLeftSport(1,5),ReturnValue.OK);
 /*
         javaStringExample();
         arrayListExample();

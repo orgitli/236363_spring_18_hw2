@@ -822,6 +822,36 @@ public class Solution {
     }
 
     public static String getMostPopularCity() {
+        Connection connection = DBConnector.getConnection();
+        PreparedStatement pstmt = null;
+        try{
+            pstmt = connection.prepareStatement("select t1.city, num_athletes, num_sports, num_athletes/num_sports as popular_city from\n" +
+                    "(select city,sum(athletes_counter) as num_athletes from sport group by city) t1\n" +
+                    "inner join\n" +
+                    "(select city,count(sport_id) as num_sports from sport group by city) t2\n" +
+                    "on\n" +
+                    "t1.city = t2.city order by \"popular_city\" desc limit 1" );
+            ResultSet results = pstmt.executeQuery();
+            if(results.next())
+                return results.getString("city");
+
+        }catch(SQLException e){
+            return null;
+        }
+        finally {
+            try {
+                pstmt.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+            try {
+                connection.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+        }
+
+
         return "";
     }
 
