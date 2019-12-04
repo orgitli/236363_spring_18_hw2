@@ -49,6 +49,7 @@ public class Solution {
                     "    sport_id INTEGER NOT NULL ,\n" +
                     "    athlete_id INTEGER NOT NULL,\n" +
                     "    medal INTEGER ,\n" +
+                    "    active bool NOT NULL, " +
                     "    payment INTEGER NOT NULL DEFAULT 0,\n" +
                     "   FOREIGN KEY (sport_id)\n" +
                     " REFERENCES sport(sport_id)\n" +
@@ -56,7 +57,8 @@ public class Solution {
                     "   FOREIGN KEY (athlete_id)\n" +
                     " REFERENCES athlete(athlete_id)\n" +
                     " ON DELETE CASCADE,\n" +
-                    "    CHECK (medal >= 0 AND medal<4), \n" +
+                    "    CHECK (medal > 0 AND medal<4), \n" +
+                    "CHECK (payment>=0), "+
                     "PRIMARY KEY (sport_id, athlete_id)"+
                     ")");
             pstmt.execute();
@@ -78,10 +80,13 @@ public class Solution {
             pstmt.execute();
 
             //create athlete_country_medal view
-            pstmt = connection.prepareStatement("CREATE VIEW country_medal AS \n" +
-                                                     "SELECT  athlete.country, athlete.athlete_id \n" +
-                                                     "FROM athlete , participate " +
-                                                      "WHERE athlete.athlete_id=participate.athlete_id AND participate.medal IS NOT NULL");
+            pstmt = connection.prepareStatement("CREATE VIEW country_medals AS " +
+                    "SELECT COUNT(g1.athlete_id) AS medals, g2.country FROM " +
+                    "(SELECT participate.athlete_id FROM participate WHERE medal IS NOT NULL) g1 " +
+                    "INNER JOIN " +
+                    "(SELECT athlete_id, country FROM athlete) g2 ON g1.athlete_id=g2.athlete_id " +
+                    "GROUP BY g2.country " +
+                    "ORDER BY COUNT(g1.athlete_id) DESC, g2.country ASC");
             pstmt.execute();
 
             //create athlete_sport view
@@ -100,12 +105,12 @@ public class Solution {
                     "FROM participate\n" +
                     "WHERE medal=1 \n" +
                     "GROUP BY athlete_id) g1 ON g1.athlete_id=athlete.athlete_id\n" +
-                    "FULL JOIN\n" +
+                    "INNER JOIN\n" +
                     "(SELECT athlete_id, COUNT(medal)  AS silver \n" +
                     "FROM participate\n" +
                     "WHERE medal=2 \n" +
                     "GROUP BY athlete_id) g2 ON g1.athlete_id=g2.athlete_id\n" +
-                    "FULL JOIN\n" +
+                    "INNER JOIN\n" +
                     "(SELECT athlete_id, COUNT(medal)  AS bronze \n" +
                     "FROM participate\n" +
                     "WHERE medal=3 \n" +
@@ -116,7 +121,6 @@ public class Solution {
             //create athlete_rating view
 
         } catch (SQLException e) {
-            e.printStackTrace();
         }
         finally {
             try {
@@ -132,7 +136,41 @@ public class Solution {
         }
     }
 
-    public static void clearTables() { }
+    public static void clearTables() {
+        Connection connection = DBConnector.getConnection();
+        PreparedStatement pstmt = null;
+        try {
+            //create athlet
+            pstmt = connection.prepareStatement("DELETE FROM sport");
+            pstmt.execute();
+
+            //create sport
+            pstmt = connection.prepareStatement("DELETE FROM athlete");
+            pstmt.execute();
+
+            //create participate
+            pstmt = connection.prepareStatement("DELETE FROM participate");
+            pstmt.execute();
+
+            //create friends
+            pstmt = connection.prepareStatement("DELETE FROM friends");
+            pstmt.execute();
+
+        } catch (SQLException e) {
+        }
+        finally {
+            try {
+                pstmt.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+            try {
+                connection.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+        }
+    }
 
     public static void dropTables() {
         Connection connection = DBConnector.getConnection();
@@ -316,7 +354,7 @@ public class Solution {
                 sport.setId(res.getInt("sport_id"));
                 sport.setName(res.getString("sport_name"));
                 sport.setCity(res.getString("city"));
-                sport.setAthletesCount(res.getInt("athlets_counter"));
+                sport.setAthletesCount(res.getInt("athletes_counter"));
             }
             return sport;
         }
@@ -383,10 +421,11 @@ public class Solution {
             else
                 money = 100;
             pstmt = connection.prepareStatement("INSERT INTO participate" +
-                    "    VALUES (?,?,null ,?)" );
+                    "    VALUES (?,?,null,? ,?)" );
             pstmt.setInt(1, sportId);
             pstmt.setInt(2, athleteId);
-            pstmt.setInt(3, money);
+            pstmt.setBoolean(3, is_active);
+            pstmt.setInt(4, money);
             pstmt.execute();
             pstmt = connection.prepareStatement("UPDATE sport " +
                     "SET athletes_counter=athletes_counter+1 " +
@@ -430,7 +469,8 @@ public class Solution {
                     "WHERE athlete_id=? AND sport_id = ?" );
             pstmt.setInt(1, athleteId);
             pstmt.setInt(2, sportId);
-            pstmt.executeUpdate();
+            if(pstmt.executeUpdate()<1)
+                return NOT_EXISTS;
             if(active){
                 pstmt = connection.prepareStatement("UPDATE sport " +
                         "SET athletes_counter=athletes_counter-1 " +
@@ -465,7 +505,7 @@ public class Solution {
         try{
             pstmt = connection.prepareStatement("UPDATE participate" +
                     "    SET medal=?" +
-                    "   WHERE athlete_id = ? AND sport_id = ?");
+                    "   WHERE athlete_id = ? AND sport_id = ? AND active = true");
             pstmt.setInt(1, place);
             pstmt.setInt(2, athleteId);
             pstmt.setInt(3,sportId);
@@ -629,48 +669,28 @@ public class Solution {
     }
 
     public static ReturnValue changePayment(Integer athleteId, Integer sportId, Integer payment) {
-        if(payment<0){
-            return BAD_PARAMS;
-        }
         Connection connection = DBConnector.getConnection();
         PreparedStatement pstmt = null;
         try{
-
-            // check if athlete
-            pstmt = connection.prepareStatement("SELECT active FROM athlete" +
-                    "    WHERE athlete_id=?" );
-            pstmt.setInt(1, athleteId);
-
-            ResultSet results = pstmt.executeQuery();
-            if(!results.next()){
+            pstmt = pstmt = connection.prepareStatement("SELECT * FROM participate " +
+                    "WHERE athlete_id=? AND sport_id=? AND active=false ");
+            pstmt.setInt(1,athleteId);
+            pstmt.setInt(2, sportId);
+            ResultSet res = pstmt.executeQuery();
+            if(!res.next())
                 return NOT_EXISTS;
-            }
-            if(results.next()==true) {
-                return NOT_EXISTS;
-            }
-
-
-            pstmt = connection.prepareStatement("SELECT * FROM participate" +
-                    "    WHERE sport_id=? AND athlete_id=?" );
-            pstmt.setInt(1, sportId);
-            pstmt.setInt(2, athleteId);
-            results = pstmt.executeQuery();
-            if(!results.next()){
-                return NOT_EXISTS;
-            }
-            pstmt = connection.prepareStatement("UPDATE participate" +
-                    " SET payment=?   WHERE sport_id=? AND athlete_id=?" );
+            pstmt = connection.prepareStatement("UPDATE participate " +
+                    "SET payment=? " +
+                    "    WHERE sport_id=? AND athlete_id=? AND active=true" );
             pstmt.setInt(1, payment);
             pstmt.setInt(2, sportId);
             pstmt.setInt(3, athleteId);
-
-
-
-            pstmt.executeUpdate();
-
+            if(pstmt.executeUpdate()<1){
+                return NOT_EXISTS;
+            }
         }catch(SQLException e){
-
-
+            if(Integer.valueOf(e.getSQLState()) == PostgreSQLErrorCodes.CHECK_VIOLATION.getValue())
+                return BAD_PARAMS;
             return ERROR;
         }
         finally {
@@ -692,17 +712,7 @@ public class Solution {
         Connection connection = DBConnector.getConnection();
         PreparedStatement pstmt = null;
         try{
-            /*
-            pstmt = connection.prepareStatement( "SELECT sport_id FROM athlete_sport " +
-                                                      "WHERE athlete_id=? AND " +
-                                                     "sport_id NOT IN(SELECT sport_id FROM (SELECT athlete_id1 FROM friends " +
-                                                     "WHERE athlete_id2=? " +
-                                                     "UNION ALL " +
-                                                     "SELECT athlete_id2 FROM friends " +
-                                                     "WHERE athlete_id2=? ) AS friends_sports )" +
-                                                      "" );
 
-             */
             pstmt = connection.prepareStatement("SELECT sport_id FROM ((SELECT athlete_id1 AS athlete_id FROM friends " +
                     "WHERE athlete_id2=? " +
                     "UNION ALL " +
@@ -739,14 +749,14 @@ public class Solution {
         Connection connection = DBConnector.getConnection();
         PreparedStatement pstmt = null;
         try{
-            pstmt = connection.prepareStatement("SELECT FROM country_medal" +
+            pstmt = connection.prepareStatement("SELECT medals FROM country_medals" +
                     "    WHERE country=? " );
             pstmt.setString(1, country);
             ResultSet results = pstmt.executeQuery();
-            int medals_counter = 0;
-            while(results.next())
-                medals_counter++;
-            return medals_counter;
+            int medals = 0;
+            if(results.next())
+                medals = results.getInt("medals");
+            return medals;
         }catch(SQLException e){
             return 0;
         }
@@ -763,8 +773,6 @@ public class Solution {
             }
         }
     }
-
-
 
     public static Integer getIncomeFromSport(Integer sportId) {
         Connection connection = DBConnector.getConnection();
@@ -820,9 +828,7 @@ public class Solution {
         Connection connection = DBConnector.getConnection();
         PreparedStatement pstmt = null;
         try{
-            pstmt = connection.prepareStatement("SELECT country, COUNT(athlete_id) AS medals FROM country_medal" +
-                                                "    GROUP BY country " +
-                                                       " ORDER BY medals DESC, country ASC " );
+            pstmt = connection.prepareStatement("SELECT country FROM country_medals LIMIT 1 " );
             ResultSet results = pstmt.executeQuery();
             if(results.next())
                 return results.getString("country");
@@ -949,11 +955,98 @@ public class Solution {
     }
 
     public static ArrayList<Integer> getCloseAthletes(Integer athleteId) {
-        return new ArrayList<>();
+        Connection connection = DBConnector.getConnection();
+        PreparedStatement pstmt = null;
+        try{
+            pstmt = connection.prepareStatement("select athlete.athlete_id from\n" +
+                    "((select athlete_id,count(sport_id) as sports from participate \n" +
+                    "where sport_id in (select sport_id from participate where athlete_id=?) group by athlete_id order by athlete_id asc) as t1\n" +
+                    "full join\n" +
+                    "(select athlete_id,count(sport_id) as sports from participate \n" +
+                    "where athlete_id <> ? group by athlete_id order by athlete_id asc) as t2 on t1.athlete_id=t2.athlete_id )\n" +
+                    "full join athlete on athlete.athlete_id=t1.athlete_id\n" +
+                    "where athlete.athlete_id<>? and (coalesce(t1.sports,0)>=0.5*coalesce(t2.sports,0)) limit 10\n" +
+                    "\n" +
+                    "\n" );
+            pstmt.setInt(1,athleteId);
+            pstmt.setInt(2,athleteId);
+            pstmt.setInt(3,athleteId);
+            ResultSet results = pstmt.executeQuery();
+            ArrayList<Integer> aths = new ArrayList();
+
+            while(results.next()){
+
+                aths.add(results.getInt("athlete_id"));
+            }
+            return aths;
+
+        }catch(SQLException e){
+            return new ArrayList<>();
+        }
+        finally {
+            try {
+                pstmt.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+            try {
+                connection.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+        }
     }
 
     public static ArrayList<Integer> getSportsRecommendation(Integer athleteId) {
-        return new ArrayList<>();
+        Connection connection = DBConnector.getConnection();
+        PreparedStatement pstmt = null;
+        try{
+            pstmt = connection.prepareStatement("select sport.sport_name,count(participate.sport_id) as most_played,participate.sport_id  from participate\n" +
+                    "join sport on sport.sport_id=participate.sport_id\n" +
+                    "join (select athlete.athlete_id, coalesce(t1.sports,0) as T1sports, coalesce(t2.sports,0) as T2sports from\n" +
+                    "((select athlete_id,count(sport_id) as sports from participate \n" +
+                    "where sport_id in (select sport_id from participate where athlete_id=?) group by athlete_id order by athlete_id asc) as t1\n" +
+                    "full join\n" +
+                    "(select athlete_id,count(sport_id) as sports from participate \n" +
+                    "where athlete_id <> ? group by athlete_id order by athlete_id asc) as t2 on t1.athlete_id=t2.athlete_id )\n" +
+                    "full join athlete on athlete.athlete_id=t1.athlete_id\n" +
+                    "where athlete.athlete_id<>? and (coalesce(t1.sports,0)>=0.5*coalesce(t2.sports,0)) limit 10\n" +
+                    "\n" +
+                    ") as t1 on t1.athlete_id=participate.athlete_id\n" +
+                    "where participate.sport_id not in (select participate.sport_id from participate where athlete_id=?)\n" +
+                    "group by sport.sport_name, participate.sport_id\n" +
+                    "order by most_played desc, participate.sport_id ASC\n" );
+
+            pstmt.setInt(1,athleteId);
+            pstmt.setInt(2,athleteId);
+            pstmt.setInt(3,athleteId);
+            pstmt.setInt(4,athleteId);
+
+            ResultSet results = pstmt.executeQuery();
+            ArrayList<Integer> sports_ids = new ArrayList();
+
+            while(results.next()){
+
+                sports_ids.add(results.getInt("sport_id"));
+
+
+            }
+            return sports_ids;
+
+        }catch(SQLException e){
+            return new ArrayList<>();
+        }
+        finally {
+            try {
+                pstmt.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+            try {
+                connection.close();
+            } catch (SQLException e) {
+                //e.printStackTrace()();
+            }
+        }
     }
 }
-
