@@ -15,6 +15,169 @@ import static org.junit.Assert.assertEquals;
 
 
 public class Example {
+    private static Sport createSport(int id,String name,String city){
+        Sport s = new Sport();
+        s.setId(id);
+        s.setName(name);
+        s.setCity(city);
+        return s;
+    }
+    private static String randomString(){
+        String output = "";
+        char c;
+        for (int i=0;i<8;i++){
+            c = (char)((int)(Math.random()*(122-97+1)+97));
+            output += c;
+        }
+        return output;
+    }
+    private static Athlete createAth(int id, String name, String country, boolean active){
+        Athlete a = new Athlete();
+        a.setId(id);
+        a.setName(name);
+        a.setCountry(country);
+        a.setIsActive(active);
+        return a;
+    }
+
+    private static void testMostPopularCity(){
+
+        Solution sol=new Solution();
+        sol.dropTables();
+        sol.createTables();
+        String[] countries = {"Israel","Russia","Jamaica","Levanon","USA","French","Pakistan","Papa new guina"};
+        String[] names = {"Iliya_","Or_","Yogen_","Yana_","Miri_"};
+        sol.addSport(createSport(1,"football","Haifa"));
+        sol.addSport(createSport(2,"vollyball","Haifa"));
+        sol.addSport(createSport(3,"Judo","Haifa"));
+        sol.addSport(createSport(4,"fancing","Nahariya"));
+        sol.addSport(createSport(5,"swimming","Eilat"));
+        sol.addSport(createSport(6,"Dancing","Eilat"));
+        int sports_in_haifa = 3;
+        int sports_in_nahariya = 1;
+        int sports_in_eilat = 2;
+        int athlete_in_haifa = 0;
+        int athlete_in_nahariya = 0;
+        int athlete_in_eilat = 0;
+        for (int i=1;i<=100;i++){
+
+            Athlete a = createAth(i,names[(int)(Math.random()*names.length)]+"_"+randomString(),countries[(int)(Math.random()*countries.length) ],true);
+            sol.addAthlete(a);
+            int sport_id = (int)(Math.random()*(6-1+1)+1);
+            if( sol.athleteJoinSport(sport_id,i) == ReturnValue.OK){
+                switch(sport_id){
+                    case 1:
+                        athlete_in_haifa++;
+                        break;
+                    case 2:
+                        athlete_in_haifa++;
+                        break;
+                    case 3:
+                        athlete_in_haifa++;
+                        break;
+                    case 4:
+                        athlete_in_nahariya++;
+                        break;
+                    case 5:
+                        athlete_in_eilat++;
+                        break;
+                    case 6:
+                        athlete_in_eilat++;
+                        break;
+                }
+            }
+            sport_id = (int)(Math.random()*(6-1+1)+1);
+            if( sol.athleteJoinSport(sport_id,i) == ReturnValue.OK){
+                switch(sport_id){
+                    case 1:
+                        athlete_in_haifa++;
+                        break;
+                    case 2:
+                        athlete_in_haifa++;
+                        break;
+                    case 3:
+                        athlete_in_haifa++;
+                        break;
+                    case 4:
+                        athlete_in_nahariya++;
+                        break;
+                    case 5:
+                        athlete_in_eilat++;
+                        break;
+                    case 6:
+                        athlete_in_eilat++;
+                        break;
+                }
+            }
+            sport_id = (int)(Math.random()*(6-1+1)+1);
+            if( sol.athleteJoinSport(sport_id,i) == ReturnValue.OK){
+                switch(sport_id){
+                    case 1:
+                        athlete_in_haifa++;
+                        break;
+                    case 2:
+                        athlete_in_haifa++;
+                        break;
+                    case 3:
+                        athlete_in_haifa++;
+                        break;
+                    case 4:
+                        athlete_in_nahariya++;
+                        break;
+                    case 5:
+                        athlete_in_eilat++;
+                        break;
+                    case 6:
+                        athlete_in_eilat++;
+                        break;
+                }
+            }
+            sport_id = (int)(Math.random()*(6-1+1)+1);
+            if( sol.athleteJoinSport(sport_id,i) == ReturnValue.OK){
+                switch(sport_id){
+                    case 1:
+                        athlete_in_haifa++;
+                        break;
+                    case 2:
+                        athlete_in_haifa++;
+                        break;
+                    case 3:
+                        athlete_in_haifa++;
+                        break;
+                    case 4:
+                        athlete_in_nahariya++;
+                        break;
+                    case 5:
+                        athlete_in_eilat++;
+                        break;
+                    case 6:
+                        athlete_in_eilat++;
+                        break;
+                }
+            }
+
+        }
+        String expected_res = sol.getMostPopularCity();
+
+        int largest = Collections.max(Arrays.asList(athlete_in_haifa/sports_in_haifa, athlete_in_nahariya/sports_in_nahariya, athlete_in_eilat/sports_in_eilat));
+        int haifa_res = athlete_in_haifa/sports_in_haifa;
+        int nahariya_res = athlete_in_nahariya/sports_in_nahariya;
+        int eilat_res = athlete_in_eilat/sports_in_eilat;
+        System.out.print("Eilat: " + eilat_res +", haifa: " + haifa_res +", Nahariya: " + nahariya_res +". ");
+        if(largest==eilat_res) {
+            System.out.println("winner: Eilat");
+            assertEquals("Eilat", expected_res);
+        }else if(largest == haifa_res) {
+            System.out.println("winner: Haifa");
+            assertEquals("Haifa", expected_res);
+        }else if(largest == nahariya_res) {
+            System.out.println("winner: Nahariya");
+            assertEquals("Nahariya", expected_res);
+        }
+
+        // System.out.println(sol.getCloseAthletes(8));
+        // System.out.println(sol.getSportsRecommendation(8));
+    }
 
     public static void main(String[] args) {
 
