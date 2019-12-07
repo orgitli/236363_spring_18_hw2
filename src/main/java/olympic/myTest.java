@@ -19,7 +19,8 @@ public class myTest {
         //testGetBestCountry();
         //testGetMostPopularCity();
         //testGetAthleteMedals();
-        testGetMostRatedAthletes();
+        //testGetMostRatedAthletes();
+        testGetCloseAthletes();
     }
 
 
@@ -622,5 +623,79 @@ public class myTest {
         arr.add(33);
         arr.add(35);
         assertEquals(arr, sol.getMostRatedAthletes());
+    }
+
+    private static void testGetCloseAthletes(){
+        Solution sol = new Solution();
+        sol.dropTables();
+        sol.createTables();
+
+        //add athletes 1-10 and sports 1-10
+        for(int i=1; i<=10; i++){
+            Athlete a = startAthlete(i, "Fsda", "fds", true);
+            Sport s = startSport(i, "Fsda", "fdsa");
+            sol.addAthlete(a);
+            sol.addSport(s);
+        }
+        //add athletes 11-20
+        for(int i=11; i<=20; i++){
+            Athlete a = startAthlete(i, "Fsda", "fds", true);
+            sol.addAthlete(a);
+        }
+
+        ArrayList<Integer> arr = new ArrayList<>();
+        for(int i=2; i<=11; i++)
+            arr.add(i);
+        assertEquals(arr, sol.getCloseAthletes(1));//evreryone close to each other
+
+        arr.clear();
+        for(int i=1; i<=10; i++)
+            arr.add(i);
+        assertEquals(arr, sol.getCloseAthletes(11));//evreryone close to each other
+
+
+        sol.athleteJoinSport(1,11);
+        arr.clear();
+        assertEquals(arr, sol.getCloseAthletes(11));// no one close to 11- he take sport
+        assertEquals(arr, sol.getCloseAthletes(41));
+        assertEquals(arr, sol.getCloseAthletes(-1));
+
+        sol.athleteJoinSport(1,1);
+        arr.add(1);
+        assertEquals(arr, sol.getCloseAthletes(11));
+        arr.clear();
+        arr.add(11);
+        assertEquals(arr, sol.getCloseAthletes(1));
+
+
+        sol.athleteJoinSport(2,11);
+        sol.athleteJoinSport(3,11);
+        sol.athleteJoinSport(4,11);
+        sol.athleteJoinSport(2,2);
+        arr.clear();
+        assertEquals(arr, sol.getCloseAthletes(11));
+        sol.athleteJoinSport(2,1);
+        arr.add(1);
+        assertEquals(arr, sol.getCloseAthletes(11));
+        arr.clear();
+        arr.add(2);
+        arr.add(11);
+        assertEquals(arr, sol.getCloseAthletes(1));
+
+        sol.athleteJoinSport(5,11);
+        arr.clear();
+        assertEquals(arr, sol.getCloseAthletes(11));
+
+        for(int i=12; i<=20; i++){
+            sol.athleteJoinSport(1,i);
+            sol.athleteJoinSport(3,i);
+            sol.athleteJoinSport(4,i);
+            arr.add(i);
+        }
+        assertEquals(arr, sol.getCloseAthletes(11));
+
+        sol.athleteLeftSport(4,12);
+        arr.remove(0);
+        assertEquals(arr, sol.getCloseAthletes(11));
     }
 }

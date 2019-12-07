@@ -1028,7 +1028,7 @@ public class Solution {
                     "(SELECT athlete_id, sport_id from participate t2 WHERE athlete_id=1)AS t2\n" +
                     "ON t1.sport_id=t2.sport_id \n" +
                     "GROUP BY t1.athlete_id) AS t1\n" +
-                    "WHERE t1.sports_count*2 > (SELECT COUNT(sport_id) FROM participate WHERE athlete_id=1)\n" +
+                    "WHERE t1.sports_count*2 >= (SELECT COUNT(sport_id) FROM participate WHERE athlete_id=1)\n" +
                     "ORDER BY t1.athlete_id ASC LIMIT 10) AS t2)\n" +
                     "UNION\n" +
                     "(SELECT athlete_id FROM athlete \n" +
@@ -1039,9 +1039,7 @@ public class Solution {
                     "order by most_played desc, participate.sport_id ASC  limit 3\n" );
 
             pstmt.setInt(1,athleteId);
-            pstmt.setInt(2,athleteId);
-            pstmt.setInt(3,athleteId);
-            pstmt.setInt(4,athleteId);
+
 
 
             ResultSet results = pstmt.executeQuery();
@@ -1073,3 +1071,5 @@ public class Solution {
     }
 
 }
+
+
