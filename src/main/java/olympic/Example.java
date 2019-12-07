@@ -1,5 +1,5 @@
 package olympic;
-
+/*
 import olympic.business.Athlete;
 import olympic.business.ReturnValue;
 import olympic.business.Sport;
@@ -267,7 +267,7 @@ public class Example {
         assertEquals(sol.athleteDisqualified(1,1), ReturnValue.NOT_EXISTS);
         assertEquals(sol.athleteDisqualified(2,30), ReturnValue.NOT_EXISTS);
         assertEquals( sol.confirmStanding(1,30, 2), ReturnValue.OK);
-        */
+
 
         //check makeFriends and removeFriendship
         Solution sol=new Solution();
@@ -366,7 +366,7 @@ public class Example {
         sol.addAthlete(athlete);
         assertEquals(sol.athleteJoinSport(1,5),ReturnValue.OK);
         assertEquals(sol.athleteLeftSport(1,5),ReturnValue.OK);
-/*
+
         javaStringExample();
         arrayListExample();
         dropTable();
@@ -383,7 +383,7 @@ public class Example {
         deleteFromTable();
         selectFromTable();
         dropTable();
-*/
+
     }
 
     private static void deleteFromTable() {
@@ -610,3 +610,4 @@ public class Example {
     }
 
 }
+*/
